@@ -1,35 +1,50 @@
 require 'rubygems'
 require 'json'
 require 'rest_client'
-
+require 'cgi'
 class User
   def initialize(user)
     @user=user
   end
   def id
-    @user[:userprincipalname].first
+    @id
   end
   def name
     @user[:cn]
   end
+  def email
+    @user[:userprincipalname].first
+  end
 
+  def merge!(existing)
+
+    @id =existing["_id"]
+    @rev=existing["_rev"]
+  end
+  # refactor this shit
   def to_json
-    {
-      :id=>@user[:uidnumber].first,
+    representation.to_json
+  end
+
+  def representation
+    rep={
+      :id=>@user[:userprincipalname].first,
       :username=>@user[:uid].first,
       :logon_count=> @user[:logoncount].first,
       :displayname=> @user.cn.first,
       :title=> @user[:title].first,
       :other_emails=> @user[:othermailbox],
       :created_at=>DateTime.parse(@user.whencreated.first),
-      :home_office=>@user[:physicaldeliveryofficename].first,
-      :email=>@user.userprincipalname.first,
+      :home_office=>email,
+      :email=>email,
       :address=>{ :street=>@user[:streetaddress].first,:state=>@user[:st].first,:country=>@user[:co].first, :city=>@user[:l].first, :postcode=> @user[:postalcode].first},
       :phones=>{:home=>@user[:homephone].first,:mobile=> @user[:othermobile].first },
       :im=> im
-    }.to_json
-
+    }
+    rep.merge!({ "_id" => @id, "_rev"=>@rev}) unless @id.nil?
+    rep
   end
+
   def im
     begin
       @user[:info].first.nil? ? "": JSON::parse(@user[:info].first)
@@ -46,20 +61,42 @@ class Couch
     host=opts["host"] || "http://127.0.0.1.5984"
     database=opts["database"] || "addressbook"
     @url= "#{host}/#{database}"
+    @bad=[]
+    @good=[]
   end
 
   def export(users)
-    @bad=[]
-    @good=[]
-    users.each{ |user| create(User.new(user))}
+    users.each{ |user| post(User.new(user))}
     puts "Good user #{@good.size}"
     puts "Bad Users #{@bad.size}"
   end
 
   def sync(users)
+    users.each { |user| update(User.new(user))}
+    puts "Good user #{@good.size}"
+    puts "Bad Users #{@bad.size}"
 
   end
-  def create(user)
+
+  def update(user)
+    match=JSON::parse(RestClient.get("#{@url}/_design/address_book/_view/by_email?key="+CGI::escape('"'+user.email+'"')))["rows"].first
+    user.merge!(match["value"]) unless match.nil?
+    put(user)
+  end
+
+  # duplicated
+  def put(user)
+    begin
+      RestClient.put("#{ @url}/#{user.id}", user.to_json)
+      @good << user
+    rescue Exception=>ex
+      @bad << user
+      $stderr.puts ex
+      $stderr.puts "Exception happened Ignoring #{user.name}"
+    end
+
+  end
+  def post(user)
     begin
       RestClient.post(@url, user.to_json)
       @good << user

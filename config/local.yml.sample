@@ -1,0 +1,10 @@
+development:
+  ldap:
+    user: svadagir@thoughtworks.com
+    password: *********
+    host: foobar.thoughtworks.com
+    search_base: OU=Enterprise,OU=Principal,DC=corporate,DC=thoughtworks,DC=com
+    port: 389
+  database:
+    host: http://127.0.0.1:5984
+    database: tw-address-book

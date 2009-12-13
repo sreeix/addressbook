@@ -1,10 +1,7 @@
 require 'rubygems'
 require 'net/ldap'
-require 'couch'
-require 'yaml'
 
 class AddressBook
-  attr_reader :users
   def initialize(options={})
     @host=options["host"]
     @search_base=options["search_base"]
@@ -12,17 +9,21 @@ class AddressBook
     @user=options["user"]
     @password=options["password"]
   end
-  def import
+  def users
+    @users=@users|| load_users_from_ldap
+  end
+
+  def load_users_from_ldap
     ldap = Net::LDAP.new(:host => @host, :port => @port)
     ldap.auth @user, @password
     ldap.bind
-    @users=ldap.search(:base=>@search_base, :return_result=>true)
+    ldap.search(:base=>@search_base, :return_result=>true).find_all{|item| item.objectclass == ["top", "person", "organizationalPerson", "user"]}
   end
+
   def to_s
     "#{@host }:#{@port}, #{@user}:********"
   end
 end
 
-addr_book=AddressBook.new(YAML::load(File.read("local.yml"))["development"])
-Couch.new.export(addr_book.import.find_all{|item| item.objectclass == ["top", "person", "organizationalPerson", "user"]})
+
 

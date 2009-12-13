@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'optparse'
+require File.join(File.dirname(__FILE__),'..','lib','address_book')
+require File.join(File.dirname(__FILE__),'..','lib','couch')
+require 'yaml'
+ dev_conf=YAML::load(File.read(File.join(File.dirname(__FILE__),'..','config','local.yml')))["development"]
+addr_book=AddressBook.new(dev_conf["ldap"])
+puts addr_book.users.size
+Couch.new(dev_conf["database"]).export(addr_book.users)
+
+
+
+
+

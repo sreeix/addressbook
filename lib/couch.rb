@@ -56,6 +56,9 @@ class Couch
     puts "Bad Users #{@bad.size}"
   end
 
+  def sync(users)
+
+  end
   def create(user)
     begin
       RestClient.post(@url, user.to_json)

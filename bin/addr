@@ -4,12 +4,43 @@ require 'optparse'
 require File.join(File.dirname(__FILE__),'..','lib','address_book')
 require File.join(File.dirname(__FILE__),'..','lib','couch')
 require 'yaml'
- dev_conf=YAML::load(File.read(File.join(File.dirname(__FILE__),'..','config','local.yml')))["development"]
+
+
+options = { :config => File.expand_path("~/.ey-cloud.yml") }
+OptionParser.new do |opts|
+  opts.banner = "Usage: addr [options]"
+
+  opts.on( '-s', '--sync', "sync with the database" ) do |f|
+    options[:sync] = f
+  end
+
+  opts.on( '-b', '--build', "Creates a new database" ) do |f|
+    options[:build] = f
+  end
+
+  opts.on( '-h', '--help', 'Display this screen' ) do |f|
+    puts opts
+    exit
+  end
+end.parse!
+
+
+
+
+
+
+dev_conf=YAML::load(File.read(File.join(File.dirname(__FILE__),'..','config','local.yml')))["development"]
 addr_book=AddressBook.new(dev_conf["ldap"])
+database=Couch.new(dev_conf["database"])
+if(options[:build])
+   database.export(addr_book.users)
+elsif(options[:sync])
+   database.sync(addr_book.users)
+else
+  puts "-h for help"
+  exit
+end
 puts addr_book.users.size
-Couch.new(dev_conf["database"]).export(addr_book.users)
-
-
 
 
 

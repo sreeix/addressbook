@@ -15,17 +15,20 @@ class User
   def email
     @user[:userprincipalname].first
   end
-
   def merge!(existing)
-
     @id =existing["_id"]
     @rev=existing["_rev"]
+    self
   end
-  # refactor this shit
+  def newer?(updated_at)
+    puts "#{ @user.whenchanged.first} and #{updated_at}"
+    DateTime.parse(@user.whenchanged.first) > DateTime.parse(updated_at)
+  end
+
   def to_json
     representation.to_json
   end
-
+  # refactor this shit
   def representation
     rep={
       :id=>@user[:userprincipalname].first,
@@ -34,9 +37,9 @@ class User
       :displayname=> @user.cn.first,
       :title=> @user[:title].first,
       :other_emails=> @user[:othermailbox],
-      :created_at=>DateTime.parse(@user.whencreated.first),
-      :home_office=>email,
-      :email=>email,
+      :created_at=> DateTime.parse(@user.whencreated.first),
+      :updated_at=> DateTime.parse(@user.whenchanged.first),
+      :email=> email,
       :address=>{ :street=>@user[:streetaddress].first,:state=>@user[:st].first,:country=>@user[:co].first, :city=>@user[:l].first, :postcode=> @user[:postalcode].first},
       :phones=>{:home=>@user[:homephone].first,:mobile=> @user[:othermobile].first },
       :im=> im
@@ -80,8 +83,8 @@ class Couch
 
   def update(user)
     match=JSON::parse(RestClient.get("#{@url}/_design/address_book/_view/by_email?key="+CGI::escape('"'+user.email+'"')))["rows"].first
-    user.merge!(match["value"]) unless match.nil?
-    put(user)
+    puts match["value"].inspect
+    put(user.merge!(match["value"])) if (!match.nil? and user.newer? match["value"]["updated_at"])
   end
 
   # duplicated

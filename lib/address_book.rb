@@ -8,6 +8,7 @@ class AddressBook
     @port=options["port"] || 389
     @user=options["user"]
     @password=options["password"]
+    @filter=options["filter"]
   end
   def users
     @users=@users|| load_users_from_ldap
@@ -17,7 +18,8 @@ class AddressBook
     ldap = Net::LDAP.new(:host => @host, :port => @port)
     ldap.auth @user, @password
     ldap.bind
-    ldap.search(:base=>@search_base, :return_result=>true).find_all{|item| item.objectclass == ["top", "person", "organizationalPerson", "user"]}
+    filter = Net::LDAP::Filter.eq( "cn", @filter.nil? ? "*":@filter )
+    ldap.search(:base=>@search_base, :return_result=>true,:filter=>filter).find_all{|item| item.objectclass == ["top", "person", "organizationalPerson", "user"]}
   end
 
   def to_s

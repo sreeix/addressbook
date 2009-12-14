@@ -24,11 +24,6 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-
-
-
-
-
 dev_conf=YAML::load(File.read(File.join(File.dirname(__FILE__),'..','config','local.yml')))["development"]
 addr_book=AddressBook.new(dev_conf["ldap"])
 database=Couch.new(dev_conf["database"])
@@ -40,7 +35,6 @@ else
   puts "-h for help"
   exit
 end
-puts addr_book.users.size
 
 
 
